@@ -10,7 +10,7 @@ from optparse import OptionParser
 import logging
 
 from zeroinstall import SafeException, NeedDownload
-from zeroinstall.injector import model, autopolicy, namespaces
+from zeroinstall.injector import model, autopolicy, namespaces, selections
 from zeroinstall.injector.iface_cache import iface_cache
 
 #def program_log(msg): os.access('MARK: 0launch: ' + msg, os.F_OK)
@@ -190,8 +190,8 @@ def _normal_mode(options, args):
 			_get_selections(policy)
 		else:
 			if not options.download_only:
-				from zeroinstall.injector import run
-				run.execute(policy, args[1:], dry_run = options.dry_run, main = options.main, wrapper = options.wrapper)
+				runner = _get_runner(options)
+				runner.run(selections.Selections(policy), args[1:])
 			else:
 				logging.info("Downloads done (download-only mode)")
 			assert options.dry_run or options.download_only
@@ -247,7 +247,8 @@ def _normal_mode(options, args):
 				doc.writexml(sys.stdout)
 				sys.stdout.write('\n')
 			elif not options.download_only:
-				run.execute_selections(sels, prog_args, options.dry_run, options.main, options.wrapper)
+				runner = _get_runner(options)
+				runner.run(sels, prog_args)
 		else:
 			#program_log('download_and_execute ' + iface_uri)
 			policy.download_and_execute(prog_args, refresh = bool(options.refresh), main = options.main)
@@ -255,16 +256,23 @@ def _normal_mode(options, args):
 		# This only happens for dry runs
 		print ex
 
+def _get_runner(options):
+	from zeroinstall.injector import run
+	runner = run.Runner()
+	if options:
+		runner.dry_run = options.dry_run
+		runner.main = options.main
+		runner.wrapper = options.wrapper
+	return runner
+
 def _fork_gui(iface_uri, gui_args, prog_args, options = None):
 	"""Run the GUI to get the selections.
 	prog_args and options are used only if the GUI requests a test.
 	"""
 	from zeroinstall import helpers
 	def test_callback(sels):
-		from zeroinstall.injector import run
-		return run.test_selections(sels, prog_args,
-					     bool(options and options.dry_run),
-					     options and options.main)
+		runner = _get_runner(options)
+		return runner.run_test(sels, prog_args)
 	return helpers.get_selections_gui(iface_uri, gui_args, test_callback)
 
 def _download_missing_selections(options, sels):
@@ -278,7 +286,6 @@ def _download_missing_selections(options, sels):
 		handler.wait_for_blocker(blocker)
 
 def _get_selections(policy):
-	import selections
 	doc = selections.Selections(policy).toDOM()
 	doc.writexml(sys.stdout)
 	sys.stdout.write('\n')
@@ -351,11 +358,12 @@ def main(command_args):
 			print "under the terms of the GNU Lesser General Public License."
 			print "For more information about these matters, see the file named COPYING."
 		elif options.set_selections:
-			from zeroinstall.injector import selections, qdom, run
+			from zeroinstall.injector import qdom
 			sels = selections.Selections(qdom.parse(file(options.set_selections)))
 			_download_missing_selections(options, sels)
 			if not options.download_only:
-				run.execute_selections(sels, args, options.dry_run, options.main, options.wrapper)
+				runner = _get_runner(options)
+				runner.run(sels, args)
 		elif getattr(options, 'import'):
 			_import_feed(args)
 		elif options.feed:
