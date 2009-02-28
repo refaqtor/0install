@@ -263,6 +263,7 @@ def _get_runner(options):
 		runner.dry_run = options.dry_run
 		runner.main = options.main
 		runner.wrapper = options.wrapper
+		runner.sandbox = options.sandbox
 	return runner
 
 def _fork_gui(iface_uri, gui_args, prog_args, options = None):
@@ -328,6 +329,7 @@ def main(command_args):
 	parser.add_option("-o", "--offline", help="try to avoid using the network", action='store_true')
 	parser.add_option("-r", "--refresh", help="refresh all used interfaces", action='store_true')
 	parser.add_option("", "--set-selections", help="run versions specified in XML file", metavar='FILE')
+	parser.add_option("", "--sandbox", help="execute program inside a sandbox", metavar='COMMAND')
 	parser.add_option("-s", "--source", help="select source code", action='store_true')
 	parser.add_option("-v", "--verbose", help="more verbose output", action='count')
 	parser.add_option("-V", "--version", help="display version information", action='store_true')

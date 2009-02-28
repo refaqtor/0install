@@ -43,6 +43,8 @@ class Runner:
 		@type prog_args: [str]
 		@precondition: All implementations are in the cache.
 		"""
+		if self.sandbox:
+			return self._run_in_sandbox(selections, prog_args)
 		sels = selections.selections
 		for selection in sels.values():
 			_do_bindings(selection, selection.bindings)
@@ -53,6 +55,23 @@ class Runner:
 
 		root_impl = sels[selections.interface]
 		self._execute(root_impl, prog_args)
+
+	def _run_in_sandbox(self, selections, prog_args):
+		import tempfile
+		tmp = tempfile.TemporaryFile(prefix = '0launch-sandbox')
+		doc = selections.toDOM()
+		doc.writexml(tmp, encoding = 'utf-8')
+		tmp.flush()
+		tmp.seek(0)
+
+		if self.wrapper:
+			launch_opts = ['--wrapper', self.wrapper]
+		else:
+			launch_opts = []
+
+		prog_args = ['-c', self.sandbox + ' "$@"', '-',
+				'0launch', '--set-selections-fd', str(tmp.fileno())] + launch_opts + ['--'] + list(prog_args)
+		self._exec('/bin/sh', prog_args)
 
 	def run_test(self, selections, prog_args):
 		"""Run the program in a child process, collecting stdout and stderr.
@@ -123,6 +142,9 @@ class Runner:
 			prog_args = ['-c', self.wrapper + ' "$@"', '-', prog_path] + list(prog_args)
 			prog_path = '/bin/sh'
 
+		self._exec(prog_path, prog_args)
+
+	def _exec(self, prog_path, prog_args):
 		if self.dry_run:
 			print "Would execute:", prog_path, ' '.join(prog_args)
 		else:
