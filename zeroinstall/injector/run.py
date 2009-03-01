@@ -57,12 +57,14 @@ class Runner:
 		self._execute(root_impl, prog_args)
 
 	def _run_in_sandbox(self, selections, prog_args):
-		import tempfile
+		import tempfile, fcntl
 		tmp = tempfile.TemporaryFile(prefix = '0launch-sandbox')
 		doc = selections.toDOM()
 		doc.writexml(tmp, encoding = 'utf-8')
 		tmp.flush()
 		tmp.seek(0)
+
+		fcntl.fcntl(tmp, fcntl.F_SETFD, 0)	# close-on-exec = False
 
 		if self.wrapper:
 			launch_opts = ['--wrapper', self.wrapper]
