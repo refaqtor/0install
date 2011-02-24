@@ -145,6 +145,7 @@ class TestInstall(BaseTest):
 
 		# Using a remote feed for the first time
 		self.config.stores = TestStores()
+		self.config.driver_factory.stores = self.config.stores
 		binary_feed = reader.load_feed('Binary.xml')
 		self.config.fetcher.allow_download('sha1=123')
 		self.config.fetcher.allow_feed_download('http://foo/Binary.xml', binary_feed)

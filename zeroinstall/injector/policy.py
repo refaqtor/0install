@@ -14,7 +14,7 @@ from logging import info, debug, warn
 import ConfigParser
 
 from zeroinstall import zerostore, SafeException
-from zeroinstall.injector import arch, model
+from zeroinstall.injector import arch, model, driver
 from zeroinstall.injector.model import Interface, Implementation, network_levels, network_offline, DistributionImplementation, network_full
 from zeroinstall.injector.handler import Handler
 from zeroinstall.injector.namespaces import config_site, config_prog
@@ -29,7 +29,7 @@ class Config(object):
 	@type handler: L{handler.Handler}
 	"""
 
-	__slots__ = ['help_with_testing', 'freshness', 'network_use', '_fetcher', '_stores', '_iface_cache', 'handler']
+	__slots__ = ['help_with_testing', 'freshness', 'network_use', '_fetcher', '_stores', '_iface_cache', 'handler', 'driver_factory']
 	def __init__(self, handler):
 		assert handler is not None
 		self.help_with_testing = False
@@ -37,6 +37,7 @@ class Config(object):
 		self.network_use = network_full
 		self.handler = handler
 		self._fetcher = self._stores = self._iface_cache = None
+		self.driver_factory = driver.DriverFactory(settings = self, iface_cache = self.iface_cache, stores = self.stores, user_interface = handler)
 
 	@property
 	def stores(self):
@@ -120,8 +121,8 @@ class Policy(object):
 	@ivar stale_feeds: set of feeds which are present but haven't been checked for a long time
 	@type stale_feeds: set
 	"""
-	__slots__ = ['root', 'watchers', 'requirements', 'config', '_warned_offline',
-		     'command', 'target_arch',
+	__slots__ = ['root', 'watchers', 'config', '_warned_offline',
+		     'target_arch', 'driver',
 		     'stale_feeds', 'solver']
 
 	help_with_testing = property(lambda self: self.config.help_with_testing,
@@ -134,6 +135,10 @@ class Policy(object):
 			     lambda self, value: setattr(self.config, 'freshness', str(value)))
 
 	implementation = property(lambda self: self.solver.selections)
+
+	requirements = property(lambda self: self.driver.requirements)
+
+	solver = property(lambda self: self.driver.solver)
 
 	ready = property(lambda self: self.solver.ready)
 
@@ -166,7 +171,6 @@ class Policy(object):
 			assert root == src == None
 			assert command == -1
 			self.target_arch = arch.get_architecture(requirements.os, requirements.cpu)
-		self.requirements = requirements
 
 		self.stale_feeds = set()
 
@@ -176,20 +180,7 @@ class Policy(object):
 			assert handler is None, "can't pass a handler and a config"
 			self.config = config
 
-		from zeroinstall.injector.solver import DefaultSolver
-		self.solver = DefaultSolver(self.config)
-
-		# If we need to download something but can't because we are offline,
-		# warn the user. But only the first time.
-		self._warned_offline = False
-
-		debug(_("Supported systems: '%s'"), arch.os_ranks)
-		debug(_("Supported processors: '%s'"), arch.machine_ranks)
-
-		if requirements.before or requirements.not_before:
-			self.solver.extra_restrictions[config.iface_cache.get_interface(requirements.interface_uri)] = [
-					model.VersionRangeRestriction(model.parse_version(requirements.before),
-								      model.parse_version(requirements.not_before))]
+		self.driver = config.driver_factory.make_driver(requirements)
 
 	@property
 	def fetcher(self):

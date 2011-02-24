@@ -119,16 +119,12 @@ class Solver(object):
 		raise NotImplementedError("Abstract")
 
 class SATSolver(Solver):
-	__slots__ = ['_failure_reason', 'config', 'extra_restrictions', 'langs']
-
-	@property
-	def iface_cache(self):
-		return self.config.iface_cache	# (deprecated; used by 0compile)
+	__slots__ = ['_failure_reason', 'config', 'stores', 'iface_cache', 'extra_restrictions', 'langs']
 
 	"""Converts the problem to a set of pseudo-boolean constraints and uses a PB solver to solve them.
 	@ivar langs: the preferred languages (e.g. ["es_ES", "en"]). Initialised to the current locale.
 	@type langs: str"""
-	def __init__(self, config, extra_restrictions = None):
+	def __init__(self, config, stores, iface_cache, extra_restrictions = None):
 		"""
 		@param network_use: how much use to make of the network
 		@type network_use: L{model.network_levels}
@@ -140,6 +136,8 @@ class SATSolver(Solver):
 		Solver.__init__(self)
 		assert not isinstance(config, str), "API change!"
 		self.config = config
+		self.stores = stores
+		self.iface_cache = iface_cache
 		self.extra_restrictions = extra_restrictions or {}
 
 		self.langs = [locale.getlocale()[0] or 'en']
@@ -166,7 +164,7 @@ class SATSolver(Solver):
 		r = cmp(a_stab == model.preferred, b_stab == model.preferred)
 		if r: return r
 
-		stores = self.config.stores
+		stores = self.stores
 		if self.config.network_use != model.network_full:
 			r = cmp(_get_cached(stores, a), _get_cached(stores, b))
 			if r: return r
@@ -231,7 +229,7 @@ class SATSolver(Solver):
 		# this is probably too much. We could insert a dummy optimial
 		# implementation in stale/uncached feeds and see whether it
 		# selects that.
-		iface_cache = self.config.iface_cache
+		iface_cache = self.iface_cache
 
 		problem = sat.SATProblem()
 
@@ -305,7 +303,7 @@ class SATSolver(Solver):
 			stability = impl.get_stability()
 			if stability <= model.buggy:
 				return stability.name
-			if (self.config.network_use == model.network_offline or not impl.download_sources) and not _get_cached(self.config.stores, impl):
+			if (self.config.network_use == model.network_offline or not impl.download_sources) and not _get_cached(self.stores, impl):
 				if not impl.download_sources:
 					return _("No retrieval methods")
 				return _("Not cached and we are off-line")

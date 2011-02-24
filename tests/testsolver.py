@@ -11,9 +11,13 @@ logger = logging.getLogger()
 #logger.setLevel(logging.DEBUG)
 
 class TestSolver(BaseTest):
+	def setUp(self):
+		BaseTest.setUp(self)
+		self.solver = solver.SATSolver(self.config, self.config.stores, self.config.iface_cache)
+
 	def testSimple(self):
 		iface_cache = self.config.iface_cache
-		s = solver.DefaultSolver(self.config)
+		s = self.solver
 
 		foo = iface_cache.get_interface('http://foo/Binary.xml')
 		self.import_feed(foo.uri, 'Binary.xml')
@@ -43,7 +47,7 @@ class TestSolver(BaseTest):
 	
 	def testDetails(self):
 		iface_cache = self.config.iface_cache
-		s = solver.DefaultSolver(self.config)
+		s = self.solver
 
 		foo_binary_uri = 'http://foo/Binary.xml'
 		foo = iface_cache.get_interface(foo_binary_uri)
@@ -70,7 +74,8 @@ class TestSolver(BaseTest):
 
 	def testRecursive(self):
 		iface_cache = self.config.iface_cache
-		s = solver.DefaultSolver(self.config)
+		s = self.solver
+
 
 		foo = iface_cache.get_interface('http://foo/Recursive.xml')
 		self.import_feed(foo.uri, 'Recursive.xml')
@@ -87,7 +92,7 @@ class TestSolver(BaseTest):
 		
 	def testMultiArch(self):
 		iface_cache = self.config.iface_cache
-		s = solver.DefaultSolver(self.config)
+		s = self.solver
 
 		foo = iface_cache.get_interface('http://foo/MultiArch.xml')
 		self.import_feed(foo.uri, 'MultiArch.xml')
@@ -128,7 +133,7 @@ class TestSolver(BaseTest):
 	
 	def testRanking(self):
 		iface_cache = self.config.iface_cache
-		s = solver.DefaultSolver(self.config)
+		s = self.solver
 		ranking = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'Ranking.xml')
 		iface = iface_cache.get_interface(ranking)
 
@@ -152,7 +157,7 @@ class TestSolver(BaseTest):
 		try:
 			locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
-			s = solver.DefaultSolver(self.config)
+			s = self.solver
 			iface = iface_cache.get_interface('http://foo/Langs.xml')
 			self.import_feed(iface.uri, 'Langs.xml')
 

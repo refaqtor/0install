@@ -11,7 +11,7 @@ os.environ['HOME'] = '/home/idontexist'
 os.environ['LANGUAGE'] = 'C'
 
 sys.path.insert(0, '..')
-from zeroinstall.injector import qdom
+from zeroinstall.injector import qdom, driver
 from zeroinstall.injector import iface_cache, download, distro, model, handler, policy, reader
 from zeroinstall.zerostore import NotStored, Store, Stores; Store._add_with_helper = lambda *unused: False
 from zeroinstall import support
@@ -148,6 +148,7 @@ class TestConfig:
 		self.handler = DummyHandler()
 		self.stores = Stores()
 		self.fetcher = TestFetcher(self)
+		self.driver_factory = driver.DriverFactory(settings = self, iface_cache = self.iface_cache, stores = self.stores, user_interface = self.handler)
 
 class BaseTest(unittest.TestCase):
 	def setUp(self):

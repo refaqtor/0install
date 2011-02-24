@@ -249,6 +249,23 @@ class Stores(object):
 				debug(_("Added system store '%s'"), directory)
 				self.stores.append(Store(directory))
 
+	def is_available(self, impl):
+		"""Check whether an implementation is available locally.
+		@type impl: model.Implementation or selections.Selection
+		@rtype: bool
+		"""
+		if hasattr(impl, 'installed'):
+			return impl.installed
+		elif impl.local_path:
+			return os.path.exists(impl.local_path)
+		else:
+			try:
+				path = self.lookup_any(impl.digests)
+				assert path
+				return True
+			except NotStored:
+				return False
+
 	def lookup(self, digest):
 		return self.lookup_any([digest])
 

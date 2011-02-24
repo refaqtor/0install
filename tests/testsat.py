@@ -134,10 +134,7 @@ def assertSelection(expected, repo):
 	class TestConfig:
 		help_with_testing = False
 		network_use = model.network_offline
-		stores = stores
-		iface_cache = cache
-
-	s = Solver(TestConfig())
+	s = Solver(TestConfig(), stores, cache)
 	s.solve(root, arch.get_architecture('Linux', 'x86_64'))
 
 	if expected[0][1] == 'FAIL':
