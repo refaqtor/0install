@@ -11,8 +11,7 @@ def _build_stability_menu(policy, impl):
 	menu = gtk.Menu()
 
 	upstream = impl.upstream_stability or model.testing
-	choices = model.stability_levels.values()
-	choices.sort()
+	choices = sorted(model.stability_levels.values())
 	choices.reverse()
 
 	def set(new):

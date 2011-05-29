@@ -364,7 +364,7 @@ class IfaceCache(object):
 		@param uri: the URI of the interface to find
 		@rtype: L{model.Interface}
 		"""
-		if type(uri) == str:
+		if isinstance(uri, str):
 			uri = unicode(uri)
 		assert isinstance(uri, unicode)
 

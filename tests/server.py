@@ -60,7 +60,7 @@ def handle_requests(*script):
 		print("Waiting for request")
 		global next_step
 		for next_step in script:
-			if type(next_step) != tuple: next_step = (next_step,)
+			if not isinstance(next_step, tuple): next_step = (next_step,)
 			for x in next_step:
 				httpd.handle_request()
 		print("Done")

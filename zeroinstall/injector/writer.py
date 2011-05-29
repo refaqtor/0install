@@ -39,8 +39,7 @@ def save_feed(feed):
 	if feed.last_checked:
 		root.setAttribute('last-checked', str(feed.last_checked))
 
-	impls = feed.implementations.values()
-	impls.sort()
+	impls = sorted(feed.implementations.values())
 	for impl in impls:
 		if impl.user_stability:
 			node = doc.createElementNS(XMLNS_IFACE, 'implementation')

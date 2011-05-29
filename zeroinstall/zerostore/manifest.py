@@ -80,8 +80,7 @@ class OldSHA1(Algorithm):
 			if stat.S_ISDIR(m):
 				if sub != '/':
 					yield "D %s %s" % (int(info.st_mtime), sub)
-				items = os.listdir(full)
-				items.sort()
+				items = sorted(os.listdir(full))
 				subdir = sub
 				if not subdir.endswith('/'):
 					subdir += '/'
@@ -448,8 +447,7 @@ class HashLibAlgorithm(Algorithm):
 			if not stat.S_ISDIR(m): raise Exception(_('Not a directory: "%s"') % full)
 			if sub != '/':
 				yield "D %s" % sub
-			items = os.listdir(full)
-			items.sort()
+			items = sorted(os.listdir(full))
 			dirs = []
 			for leaf in items:
 				path = os.path.join(root, sub[1:], leaf)

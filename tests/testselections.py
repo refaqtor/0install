@@ -27,8 +27,7 @@ class TestSelections(BaseTest):
 			self.assertEquals('http://foo/Source.xml', s.interface)
 			self.assertEquals(2, len(s.selections))
 
-			sels = [(sel.interface, sel) for sel in s.selections.values()]
-			sels.sort()
+			sels = sorted([(sel.interface, sel) for sel in s.selections.values()])
 			sels = [sel for uri,sel in sels]
 			
 			self.assertEquals('http://foo/Compiler.xml', sels[0].interface)
