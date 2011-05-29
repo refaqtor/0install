@@ -2,6 +2,7 @@
 # Copyright (C) 2010, Thomas Leonard
 # See the README file for details, or visit http://0install.net.
 
+from __future__ import print_function
 import locale
 from logging import warn
 try:
@@ -64,13 +65,13 @@ parser.disable_interspersed_args()
 
 if options.version:
 	import zeroinstall
-	print "0alias (zero-install) " + zeroinstall.version
-	print "Copyright (C) 2010 Thomas Leonard"
-	print "This program comes with ABSOLUTELY NO WARRANTY,"
-	print "to the extent permitted by law."
-	print "You may redistribute copies of this program"
-	print "under the terms of the GNU Lesser General Public License."
-	print "For more information about these matters, see the file named COPYING."
+	print("0alias (zero-install) " + zeroinstall.version)
+	print("Copyright (C) 2010 Thomas Leonard")
+	print("This program comes with ABSOLUTELY NO WARRANTY,")
+	print("to the extent permitted by law.")
+	print("You may redistribute copies of this program")
+	print("under the terms of the GNU Lesser General Public License.")
+	print("For more information about these matters, see the file named COPYING.")
 	sys.exit(0)
 
 if options.manpage:
@@ -104,13 +105,13 @@ if interface_uri is None:
 	except alias.NotAnAliasScript as ex:
 		if options.manpage:
 			os.execlp('man', 'man', *args)
-		print >>sys.stderr, str(ex)
+		print(str(ex), file=sys.stderr)
 		sys.exit(1)
 
 interface_uri = model.canonical_iface_uri(interface_uri)
 
 if options.resolve:
-	print interface_uri
+	print(interface_uri)
 	sys.exit(0)
 
 if options.manpage:
@@ -122,7 +123,7 @@ if options.manpage:
 	if sels.commands:
 		selected_command = sels.commands[0]
 	else:
-		print >>sys.stderr, "No <command> in selections!"
+		print("No <command> in selections!", file=sys.stderr)
 	selected_impl = sels.selections[interface_uri]
 
 	from zeroinstall.injector.iface_cache import iface_cache
@@ -131,7 +132,7 @@ if options.manpage:
 	if main is None:
 		main = selected_command.path
 		if main is None:
-			print >>sys.stderr, "No main program for interface '%s'" % interface_uri
+			print("No main program for interface '%s'" % interface_uri, file=sys.stderr)
 			sys.exit(1)
 
 	prog_name = os.path.basename(main)
@@ -168,15 +169,15 @@ if options.manpage:
 				else:
 					manpages.append((root, f))
 
-	print "No matching manpage was found for '%s' (%s)" % (alias_name, interface_uri)
+	print("No matching manpage was found for '%s' (%s)" % (alias_name, interface_uri))
 	if manpages:
-		print "These non-matching man-pages were found, however:"
+		print("These non-matching man-pages were found, however:")
 		for root, file in manpages:
-			print os.path.join(root, file)
+			print(os.path.join(root, file))
 	sys.exit(1)
 
 if not os.path.isdir(first_path):
-	print "(creating directory %s)" % first_path
+	print("(creating directory %s)" % first_path)
 	os.makedirs(first_path)
 
 if len(args) == 1:
@@ -186,7 +187,7 @@ if len(args) == 1:
 try:
 	interface = model.Interface(interface_uri)
 	if not reader.update_from_cache(interface):
-		print >>sys.stderr, "Interface '%s' not currently in cache. Fetching..." % interface_uri
+		print("Interface '%s' not currently in cache. Fetching..." % interface_uri, file=sys.stderr)
 		if os.spawnlp(os.P_WAIT, '0launch', '0launch', '-d', interface_uri):
 			raise model.SafeException("0launch failed")
 		if not reader.update_from_cache(interface):
@@ -197,7 +198,7 @@ try:
 		raise model.SafeException("File '%s' already exists. Delete it first." % script)
 		sys.exit(1)
 except model.SafeException as ex:
-	print >>sys.stderr, ex
+	print(ex, file=sys.stderr)
 	sys.exit(1)
 
 wrapper = file(script, 'w')
@@ -212,8 +213,8 @@ wrapper.close()
 if options.user_path:
 	pass		# Assume user knows what they're doing
 elif not in_path:
-	print >>sys.stderr, 'Warning: %s is not in $PATH. Add it with:\n%s' % (first_path, export('PATH', first_path + ':$PATH'))
+	print('Warning: %s is not in $PATH. Add it with:\n%s' % (first_path, export('PATH', first_path + ':$PATH')), file=sys.stderr)
 else:
 	shell = os.environ.get('SHELL', '?')
 	if not shell.endswith('/zsh'):
-		print "(note: some shells require you to type 'rehash' now)"
+		print("(note: some shells require you to type 'rehash' now)")

@@ -1,6 +1,7 @@
 # Copyright (C) 2010, Thomas Leonard
 # See the README file for details, or visit http://0install.net.
 
+from __future__ import print_function
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
@@ -37,7 +38,7 @@ def _download_as_child(url, if_modified_since):
 	except (HTTPError, URLError, HTTPException) as ex:
 		if isinstance(ex, HTTPError) and ex.code == 304: # Not modified
 			sys.exit(RESULT_NOT_MODIFIED)
-		print >>sys.stderr, "Error downloading '" + url + "': " + (str(ex) or str(ex.__class__.__name__))
+		print("Error downloading '" + url + "': " + (str(ex) or str(ex.__class__.__name__)), file=sys.stderr)
 		sys.exit(RESULT_FAILED)
 
 if __name__ == '__main__':

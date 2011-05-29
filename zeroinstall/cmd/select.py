@@ -5,6 +5,7 @@ The B{0install select} command-line interface.
 # Copyright (C) 2011, Thomas Leonard
 # See the README file for details, or visit http://0install.net.
 
+from __future__ import print_function
 import os, sys
 import logging
 
@@ -162,9 +163,9 @@ def show_human(sels, stores):
 		if uri in done: return
 		done.add(uri)
 		impl = sels.selections.get(uri, None)
-		print indent + "- URI:", uri
+		print(indent + "- URI:", uri)
 		if impl:
-			print indent + "  Version:", impl.version
+			print(indent + "  Version:", impl.version)
 			try:
 				if impl.id.startswith('package:'):
 					path = "(" + impl.id + ")"
@@ -172,7 +173,7 @@ def show_human(sels, stores):
 					path = impl.local_path or stores.lookup_any(impl.digests)
 			except zerostore.NotStored:
 				path = "(not cached)"
-			print indent + "  Path:", path
+			print(indent + "  Path:", path)
 			indent += "  "
 			deps = impl.dependencies
 			if command is not None:
@@ -185,7 +186,7 @@ def show_human(sels, stores):
 						child_command = None
 					print_node(child.interface, child_command, indent)
 		else:
-			print indent + "  No selected version"
+			print(indent + "  No selected version")
 
 
 	if sels.commands:
