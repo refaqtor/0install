@@ -12,7 +12,7 @@ os.environ['LANGUAGE'] = 'C'
 
 sys.path.insert(0, '..')
 from zeroinstall.injector import qdom
-from zeroinstall.injector import iface_cache, download, distro, model, handler, policy, reader, trust
+from zeroinstall.injector import iface_cache, download, distro, model, handler, policy, reader, trust, wget
 from zeroinstall.zerostore import NotStored, Store, Stores; Store._add_with_helper = lambda *unused: False
 from zeroinstall import support
 from zeroinstall.support import basedir, tasks
@@ -200,6 +200,7 @@ class BaseTest(unittest.TestCase):
 		distro._host_distribution._packagekit = DummyPackageKit()
 
 		my_dbus.system_services = {}
+		wget.shutdown()
 
 	def tearDown(self):
 		assert self.config.handler.ex is None, self.config.handler.ex
