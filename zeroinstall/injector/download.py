@@ -13,9 +13,6 @@ import tempfile, os, sys, subprocess
 
 import gobject
 
-if __name__ == '__main__':
-	sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-
 from zeroinstall import SafeException
 from zeroinstall.support import tasks
 from zeroinstall.injector import wget
@@ -28,11 +25,6 @@ download_starting = "starting"	# Waiting for UI to start it
 download_fetching = "fetching"	# In progress
 download_complete = "complete"	# Downloaded and cached OK
 download_failed = "failed"
-
-# NB: duplicated in _download_child.py
-RESULT_OK = 0
-RESULT_FAILED = 1
-RESULT_NOT_MODIFIED = 2
 
 class DownloadError(SafeException):
 	"""Download process failed."""
@@ -57,17 +49,16 @@ class Download(gobject.GObject):
 	@type downloaded: L{tasks.Blocker}
 	@ivar hint: hint passed by and for caller
 	@type hint: object
-	@ivar child: the child process
-	@type child: subprocess.Popen
 	@ivar aborted_by_user: whether anyone has called L{abort}
 	@type aborted_by_user: bool
 	@ivar unmodified: whether the resource was not modified since the modification_time given at construction
 	@type unmodified: bool
 	"""
 	__slots__ = ['url', 'tempfile', 'status', 'expected_size', 'downloaded',
-			 'hint', 'child', '_final_total_size', 'aborted_by_user',
+			 'hint', '_final_total_size', 'aborted_by_user',
 			 'modification_time', 'unmodified']
 
+	# XXX: why? some threading issue?
 	__gsignals__ = {
 			'done': (
 				gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
@@ -120,7 +111,7 @@ class Download(gobject.GObject):
 			if self.aborted_by_user:
 				raise DownloadAborted()
 			elif status == 304:
-				debug("No need to download not modified %s", self.url)
+				debug("No need to download as not modified %s", self.url)
 				self.unmodified = True
 			elif status == 200:
 				self._final_total_size = self.get_bytes_downloaded_so_far()
@@ -139,7 +130,7 @@ class Download(gobject.GObject):
 			elif exception is None:
 				raise DownloadError(_('Download %s failed: %s') % \
 						(self.url, reason))
-		except Exception, error:
+		except Exception as error:
 			__, ex, tb = sys.exc_info()
 			exception = (ex, tb)
 
@@ -154,7 +145,7 @@ class Download(gobject.GObject):
 		"""Signal the current download to stop.
 		@postcondition: L{aborted_by_user}"""
 		if self.status == download_fetching:
-			info(_("Killing download process %s"), self.url)
+			info(_("Aborting download of %s"), self.url)
 			self.__done_cb(None, None, None, None)
 			wget.abort(self.url)
 			self.aborted_by_user = True
@@ -165,7 +156,7 @@ class Download(gobject.GObject):
 		"""Returns the current fraction of this download that has been fetched (from 0 to 1),
 		or None if the total size isn't known.
 		@return: fraction downloaded
-		@rtype: int | None"""
+		@rtype: float | None"""
 		if self.status is download_starting:
 			return 0
 		if self.tempfile is None:

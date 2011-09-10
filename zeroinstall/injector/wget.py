@@ -27,6 +27,10 @@ _resolve_cache = {}
 
 
 def start(url, modification_time, fd, receiver):
+	"""Queue url to be downloaded, writing the contents to fd.
+	When done, emit the signal "done(sender, status, reason, exception)" on receiver.
+	If modification_time is not None, and the resource hasn't been modified since then,
+	the status may be 304 (Not Modified) and the file is not downloaded."""
 	_init()
 	_queue.push({'requested_url': url,
 				 'modification_time': modification_time,
@@ -36,6 +40,7 @@ def start(url, modification_time, fd, receiver):
 
 
 def abort(url):
+	"""Stop downloading url (or remove it from the queue if still pending)."""
 	_init()
 	_queue.abort(url)
 
@@ -281,7 +286,7 @@ def _read_file(request, response):
 		data = response.read(PAGE_SIZE)
 		if not data:
 			break
-		os.write(request['fd'], data)
+		os.write(request['fd'], data)	# XXX: return value ignored
 
 
 def _resolve(hostname):
