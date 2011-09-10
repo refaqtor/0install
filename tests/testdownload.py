@@ -324,7 +324,7 @@ class TestDownload(BaseTest):
 			try:
 				download_and_execute(policy, [])
 				assert False
-			except download.DownloadError as ex:
+			except Exception as ex:
 				if "Connection" not in str(ex):
 					raise
 		finally:
