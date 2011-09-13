@@ -21,8 +21,7 @@ PAGE_SIZE = 4096
 MAX_RUN_WORKERS_AND_POOL = 15
 
 _queue = None
-_http_proxy_host = None
-_http_proxy_port = None
+_http_proxy = None
 _resolve_cache = {}
 
 
@@ -53,16 +52,18 @@ def shutdown():
 
 
 def _init():
-	global _queue, _http_proxy_host, _http_proxy_port
+	global _queue, _http_proxy
 
 	if _queue is not None:
 		return
 
 	proxy_detector = urllib2.ProxyHandler()
 	if 'http' in proxy_detector.proxies:
-		proxy = proxy_detector.proxies['http'].split(':') + [80]
-		_http_proxy_host = proxy[0]
-		_http_proxy_port = int(proxy[1])
+		# XXX: https_proxy?
+		proxy = proxy_detector.proxies['http']
+		if not proxy.startswith('http://'):
+			proxy = 'http://' + proxy
+		_http_proxy = urlparse.urlparse(proxy)
 
 	_queue = _RequestsQueue()
 	atexit.register(shutdown)
@@ -139,9 +140,9 @@ class _RequestsQueue(object):
 				location_url, request = self._requests.popitem()
 
 			location_parts = urlparse.urlparse(location_url)
-			if _http_proxy_host and location_parts.scheme == 'http':
+			if _http_proxy.hostname and location_parts.scheme == 'http':
 				connection_url = (location_parts.scheme,
-						_http_proxy_host, _http_proxy_port)
+						_http_proxy.hostname, _http_proxy.port)
 			else:
 				connection_url = (location_parts.scheme,
 						location_parts.hostname, location_parts.port or '80')
