@@ -239,7 +239,7 @@ class _Worker(threading.Thread):
 					__, ex, tb = sys.exc_info()
 					exception = (ex, tb)
 
-				request['receiver'].emit('done', status, reason, exception)
+				request['receiver']._done_cb(status, reason, exception)
 		except KeyboardInterrupt, e:
 			thread.interrupt_main()
 			raise

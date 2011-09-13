@@ -35,7 +35,7 @@ class DownloadAborted(DownloadError):
 	def __init__(self, message = None):
 		SafeException.__init__(self, message or _("Download aborted at user's request"))
 
-class Download(gobject.GObject):
+class Download(object):
 	"""A download of a single resource to a temporary file.
 	@ivar url: the URL of the resource being fetched
 	@type url: str
@@ -58,13 +58,6 @@ class Download(gobject.GObject):
 			 'hint', '_final_total_size', 'aborted_by_user',
 			 'modification_time', 'unmodified']
 
-	# XXX: why? some threading issue?
-	__gsignals__ = {
-			'done': (
-				gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
-				[object, object, object]),
-			}
-
 	def __init__(self, url, hint = None, modification_time = None):
 		"""Create a new download object.
 		@param url: the resource to download
@@ -72,8 +65,6 @@ class Download(gobject.GObject):
 		@param modification_time: string with HTTP date that indicates last modification time.
 		  The resource will not be downloaded if it was not modified since that date.
 		@postcondition: L{status} == L{download_starting}."""
-		gobject.GObject.__init__(self)
-
 		self.url = url
 		self.status = download_starting
 		self.hint = hint
@@ -97,15 +88,12 @@ class Download(gobject.GObject):
 		self.downloaded = tasks.Blocker('download %s' % self.url)
 		self.status = download_fetching
 
-		self.connect('done', self.__done_cb)
 		# Let the caller to read tempfile before closing the connection
 		# TODO eliminate such unreliable workflow
 		gobject.idle_add(wget.start, self.url, self.modification_time,
 				self.tempfile.fileno(), self)
 
-	def __done_cb(self, sender, status, reason, exception):
-		self.disconnect_by_func(self.__done_cb)
-
+	def _done_cb(self, status, reason, exception):
 		try:
 			self._final_total_size = 0
 			if self.aborted_by_user:
@@ -146,7 +134,7 @@ class Download(gobject.GObject):
 		@postcondition: L{aborted_by_user}"""
 		if self.status == download_fetching:
 			info(_("Aborting download of %s"), self.url)
-			self.__done_cb(None, None, None, None)
+			self._done_cb(None, None, None)
 			wget.abort(self.url)
 			self.aborted_by_user = True
 		else:
