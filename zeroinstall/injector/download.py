@@ -13,6 +13,7 @@ import tempfile, os, sys, threading, gobject
 
 from zeroinstall import SafeException
 from zeroinstall.support import tasks
+from zeroinstall.injector import wget
 from logging import info, debug
 from zeroinstall import _
 
@@ -35,7 +36,7 @@ class DownloadAborted(DownloadError):
 	def __init__(self, message = None):
 		SafeException.__init__(self, message or _("Download aborted at user's request"))
 
-class Download(object):
+class Download(gobject.GObject):
 	"""A download of a single resource to a temporary file.
 	@ivar url: the URL of the resource being fetched
 	@type url: str
@@ -49,14 +50,23 @@ class Download(object):
 	@type downloaded: L{tasks.Blocker}
 	@ivar hint: hint passed by and for caller
 	@type hint: object
+	@ivar child: the child process
+	@type child: subprocess.Popen
 	@ivar aborted_by_user: whether anyone has called L{abort}
 	@type aborted_by_user: bool
 	@ivar unmodified: whether the resource was not modified since the modification_time given at construction
 	@type unmodified: bool
 	"""
 	__slots__ = ['url', 'tempfile', 'status', 'expected_size', 'downloaded',
+		     'child',
 		     'hint', '_final_total_size', 'aborted_by_user',
 		     'modification_time', 'unmodified']
+
+	__gsignals__ = {
+			'done': (
+				gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE,
+				[object, object, object]),
+			}
 
 	def __init__(self, url, hint = None, modification_time = None, expected_size = None):
 		"""Create a new download object.
@@ -65,11 +75,14 @@ class Download(object):
 		@param modification_time: string with HTTP date that indicates last modification time.
 		  The resource will not be downloaded if it was not modified since that date.
 		@postcondition: L{status} == L{download_fetching}."""
+		gobject.GObject.__init__(self)
+
 		self.url = url
 		self.hint = hint
 		self.aborted_by_user = False
 		self.modification_time = modification_time
 		self.unmodified = False
+		self._done_hid = None
 
 		self.tempfile = None		# Stream for result
 		self.downloaded = None
@@ -79,75 +92,56 @@ class Download(object):
 	
 		self.status = download_fetching
 		self.tempfile = tempfile.TemporaryFile(prefix = 'injector-dl-data-')
+		self.downloaded = tasks.Blocker('download %s' % self.url)
 
-		task = tasks.Task(self._do_download(), "download " + self.url)
-		self.downloaded = task.finished
+		self._done_hid = self.connect('done', self.__done_cb)
+		# Let the caller to read tempfile before closing the connection
+		# TODO eliminate such unreliable workflow
+		gobject.idle_add(wget.start, self.url, self.modification_time,
+				self.tempfile.fileno(), self)
 
-	def _do_download(self):
-		"""Will trigger L{downloaded} when done (on success or failure)."""
-		from ._download_child import download_in_thread
+	def __done_cb(self, *args):
+		if self._done_hid is not None:
+			self.disconnect(self._done_hid)
+			self._done_hid = None
+		gobject.idle_add(self._done_cb, *args)
 
-		result = []
-		thread_blocker = tasks.Blocker("wait for thread " + self.url)
-		def notify_done(status, ex = None):
-			result.append(status)
-			def wake_up_main():
-				thread_blocker.trigger(ex)
-				return False
-			gobject.idle_add(wake_up_main)
-		child = threading.Thread(target = lambda: download_in_thread(self.url, self.tempfile, self.modification_time, notify_done))
-		child.daemon = True
-		child.start()
-
-		# Wait for child to complete download.
-		yield thread_blocker
-
-		# Download is complete...
-		child.join()
-
-		assert self.status is download_fetching
-		assert self.tempfile is not None
-
-		status, = result
-
-		if status == RESULT_NOT_MODIFIED:
-			debug("%s not modified", self.url)
-			self.tempfile = None
-			self.unmodified = True
-			self.status = download_complete
-			self._final_total_size = 0
-			self.downloaded.trigger()
-			return
-
-		self._final_total_size = self.get_bytes_downloaded_so_far()
-
-		self.tempfile = None
-
-		if self.aborted_by_user:
-			assert self.downloaded.happened
-			raise DownloadAborted()
-
+	def _done_cb(self, sender, status, reason, exception):
 		try:
+			self._final_total_size = 0
+			if self.aborted_by_user:
+				raise DownloadAborted()
+			elif status == 304:
+				debug("No need to download not modified %s", self.url)
+				self.unmodified = True
+			elif status == 200:
+				self._final_total_size = self.get_bytes_downloaded_so_far()
+				# Check that the download has the correct size,
+				# if we know what it should be.
+				if self.expected_size is not None and \
+						self.expected_size != self._final_total_size:
+					raise SafeException(
+							_('Downloaded archive has incorrect size.\n'
+							  'URL: %(url)s\n'
+							  'Expected: %(expected_size)d bytes\n'
+							  'Received: %(size)d bytes') % {
+								  'url': self.url,
+								  'expected_size': self.expected_size,
+								  'size': self._final_total_size})
+			elif exception is None:
+				raise DownloadError(_('Download %s failed: %s') % \
+						(self.url, reason))
+		except Exception, error:
+			__, ex, tb = sys.exc_info()
+			exception = (ex, tb)
 
-			tasks.check(thread_blocker)
-
-			assert status == RESULT_OK
-
-			# Check that the download has the correct size, if we know what it should be.
-			if self.expected_size is not None:
-				if self._final_total_size != self.expected_size:
-					raise SafeException(_('Downloaded archive has incorrect size.\n'
-							'URL: %(url)s\n'
-							'Expected: %(expected_size)d bytes\n'
-							'Received: %(size)d bytes') % {'url': self.url, 'expected_size': self.expected_size, 'size': self._final_total_size})
-		except:
-			self.status = download_failed
-			_unused, ex, tb = sys.exc_info()
-			self.downloaded.trigger(exception = (ex, tb))
-		else:
+		if exception is None:
 			self.status = download_complete
 			self.downloaded.trigger()
-	
+		else:
+			self.status = download_failed
+			self.downloaded.trigger(exception=exception)
+
 	def abort(self):
 		"""Signal the current download to stop.
 		@postcondition: L{aborted_by_user}"""
@@ -161,9 +155,9 @@ class Download(object):
 			# In any case, we don't wait for the child to exit before notifying tasks that are waiting
 			# on us.
 			self.aborted_by_user = True
-			self.tempfile.close()
-			self.tempfile = None
-			self.downloaded.trigger((DownloadAborted(), None))
+			info(_("Killing download process %s"), self.url)
+			self.__done_cb(None, None, None, None)
+			wget.abort(self.url)
 
 	def get_current_fraction(self):
 		"""Returns the current fraction of this download that has been fetched (from 0 to 1),
