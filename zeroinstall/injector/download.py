@@ -98,7 +98,7 @@ class Download(gobject.GObject):
 		# Let the caller to read tempfile before closing the connection
 		# TODO eliminate such unreliable workflow
 		gobject.idle_add(wget.start, self.url, self.modification_time,
-				self.tempfile.fileno(), self)
+				self.tempfile, self)
 
 	def __done_cb(self, *args):
 		if self._done_hid is not None:

@@ -26,11 +26,11 @@ _http_proxy_port = None
 _resolve_cache = {}
 
 
-def start(url, modification_time, fd, receiver):
+def start(url, modification_time, outfile, receiver):
 	_init()
 	_queue.push({'requested_url': url,
 				 'modification_time': modification_time,
-				 'fd': fd,
+				 'outfile': outfile,
 				 'receiver': receiver,
 				 })
 
@@ -282,8 +282,9 @@ def _read_file(request, response):
 	while True:
 		data = response.read(PAGE_SIZE)
 		if not data:
+			request['outfile'].flush()
 			break
-		assert os.write(request['fd'], data) == len(data)
+		request['outfile'].write(data)
 
 
 def _resolve(hostname):
