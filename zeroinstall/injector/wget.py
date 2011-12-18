@@ -21,9 +21,8 @@ PAGE_SIZE = 4096
 MAX_RUN_WORKERS_AND_POOL = 15
 
 _queue = None
-_http_proxy_host = None
-_http_proxy_port = None
 _resolve_cache = {}
+_proxy_support = None
 
 
 def start(url, modification_time, outfile, receiver):
@@ -33,6 +32,22 @@ def start(url, modification_time, outfile, receiver):
 				 'outfile': outfile,
 				 'receiver': receiver,
 				 })
+
+
+def _split_hostport(host):
+	i = host.rfind(':')
+	j = host.rfind(']')		 # ipv6 addresses have [...]
+	if i > j:
+		try:
+			port = int(host[i+1:])
+		except ValueError:
+			raise InvalidURL("nonnumeric port: '%s'" % host[i+1:])	# XXX
+		host = host[:i]
+	else:
+		port = self.default_port
+	if host and host[0] == '[' and host[-1] == ']':
+		host = host[1:-1]
+	return host, port
 
 
 def abort(url):
@@ -48,16 +63,12 @@ def shutdown():
 
 
 def _init():
-	global _queue, _http_proxy_host, _http_proxy_port
+	global _queue, _proxy_support
 
 	if _queue is not None:
 		return
 
-	proxy_detector = urllib2.ProxyHandler()
-	if 'http' in proxy_detector.proxies:
-		proxy = urlparse.urlparse(proxy_detector.proxies['http'])
-		_http_proxy_host = proxy.hostname
-		_http_proxy_port = proxy.port
+	_proxy_support = urllib2.ProxyHandler()
 
 	_queue = _RequestsQueue()
 	atexit.register(shutdown)
@@ -133,13 +144,16 @@ class _RequestsQueue(object):
 					self._workders_in_wait -= 1
 				location_url, request = self._requests.popitem()
 
-			location_parts = urlparse.urlparse(location_url)
-			if _http_proxy_host and location_parts.scheme == 'http':
-				connection_url = (location_parts.scheme,
-						_http_proxy_host, _http_proxy_port)
-			else:
-				connection_url = (location_parts.scheme,
-						location_parts.hostname, location_parts.port or '80')
+			req = urllib2.Request(location_url)
+			meth = req.get_type() + '_open'
+			new_request = getattr(_proxy_support, meth)(req)
+			if new_request:
+				req = new_request
+
+			# XXX: loses authn information
+			host, port = _split_hostport(req.get_host())
+			connection_url = (req.get_type(), host, port)
+
 			connection = self._pool.pop(connection_url)
 		finally:
 			self._mutex.release()
