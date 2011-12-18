@@ -147,6 +147,10 @@ class _RequestsQueue(object):
 				location_url, request = self._requests.popitem()
 
 			req = urllib2.Request(location_url)
+
+			# XXX: Is this the right place to handle proxies? The connections-per-site
+			# limit and pooling should apply to the final site (the proxy should not
+			# be treated as a site in it own right).
 			meth = req.get_type() + '_open'
 			new_request = getattr(_proxy_support, meth)(req)
 			if new_request:
