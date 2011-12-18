@@ -477,14 +477,14 @@ class Fetcher(object):
 				if error:
 					self.handler.report_error(ex)
 				else:
-					error.append(ex)
+					error.append((ex, tb))
 			while blockers:
 				yield blockers
 				tasks.check(blockers, dl_error)
 
 				blockers = [b for b in blockers if not b.happened]
 			if error:
-				raise error[0]
+				raise error[0][0], None, error[0][1]
 
 		if not to_download:
 			return None
