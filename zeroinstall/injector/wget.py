@@ -11,7 +11,7 @@ import urllib2
 import urlparse
 import threading
 from select import select
-from httplib import HTTPConnection
+from httplib import HTTPConnection, HTTPException
 
 
 PAGE_SIZE = 4096
@@ -239,12 +239,17 @@ class _Worker(threading.Thread):
 				except _Redirect, redirect:
 					connection.redirect = (redirect.location, request)
 					continue
-				except Exception, error:
-					if isinstance(error, urllib2.HTTPError):
-						status = error.status
+				except (urllib2.HTTPError, urllib2.URLError, HTTPException, socket.error) as ex:
+					if isinstance(ex, urllib2.HTTPError):
+						status = ex.status
 					else:
 						status = None
-					reason = '%s %r' % (error, request)
+					reason = '%s %r' % (ex, request)
+					__, ex, tb = sys.exc_info()
+					import download	# XXX
+					from zeroinstall import _ # XXX
+					exception = (download.DownloadError(_('Error downloading {url}: {ex}').format(url = request, ex = ex)), tb)
+				except Exception, error:
 					__, ex, tb = sys.exc_info()
 					exception = (ex, tb)
 
