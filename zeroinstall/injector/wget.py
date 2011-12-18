@@ -68,6 +68,8 @@ def _init():
 	if _queue is not None:
 		return
 
+	# XXX: only works if the HTTP handler is itself HTTP.
+	# We could subclass ProxyHandler and override open to avoid this.
 	_proxy_support = urllib2.ProxyHandler()
 
 	_queue = _RequestsQueue()
