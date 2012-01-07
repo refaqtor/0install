@@ -103,7 +103,10 @@ class PendingFeed(object):
 		from zeroinstall.support import tasks
 
 		while blockers:
-			yield blockers
+			try:
+				yield blockers
+			except:
+				pass
 
 			old_blockers = blockers
 			blockers = []

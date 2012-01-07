@@ -371,7 +371,6 @@ class Selections(object):
 				if feed is None or sel.id not in feed.implementations:
 					fetch_feed = config.fetcher.download_and_import_feed(feed_url, iface_cache)
 					yield fetch_feed
-					tasks.check(fetch_feed)
 
 					feed = iface_cache.get_feed(feed_url)
 					assert feed, "Failed to get feed for %s" % feed_url
@@ -380,7 +379,6 @@ class Selections(object):
 
 			fetch_impls = config.fetcher.download_impls(needed_impls, stores)
 			yield fetch_impls
-			tasks.check(fetch_impls)
 		return download()
 
 	# These (deprecated) methods are to make a Selections object look like the old Policy.implementation map...

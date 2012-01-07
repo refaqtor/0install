@@ -290,9 +290,8 @@ class InterfaceBrowser:
 
 					@tasks.async
 					def update_display():
-						yield fetcher
 						try:
-							tasks.check(fetcher)
+							yield fetcher
 							# Try to insert new icon into the cache
 							# If it fails, we'll be left with None in the cached_icon so
 							# we don't try again.

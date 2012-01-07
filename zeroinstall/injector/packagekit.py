@@ -171,7 +171,10 @@ class PackageKit(object):
 			do_batch(next_batch)
 
 		while in_progress:
-			yield in_progress
+			try:
+				yield in_progress
+			except:
+				pass
 			in_progress = [b for b in in_progress if not b.happened]
 
 class PackageKitDownload:

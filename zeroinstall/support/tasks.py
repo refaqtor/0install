@@ -248,12 +248,21 @@ class Task:
 		info(_("Scheduling new task: %s"), self)
 	
 	def _resume(self):
-		# Remove from our blockers' queues
+		ex = None
+		# Remove from our blockers' queues and check for exceptions
 		for blocker in self._zero_blockers:
+			if blocker.exception:
+				if ex:
+					warn(_("Multiple exceptions waiting; skipping %s"), ex[0])
+				else:
+					ex = blocker.exception
 			blocker.remove_task(self)
 		# Resume the task
 		try:
-			new_blockers = self.iterator.next()
+			if ex is None:
+				new_blockers = self.iterator.next()
+			else:
+				new_blockers = self.iterator.throw(ex[0], None, ex[1])
 		except StopIteration:
 			# Task ended
 			self.finished.trigger()
@@ -359,8 +368,10 @@ def wait_for_blocker(blocker):
 
 	if not blocker.happened:
 		def quitter():
-			yield blocker
-			wait_for_blocker.loop.quit()
+			try:
+				yield blocker
+			finally:
+				wait_for_blocker.loop.quit()
 		Task(quitter(), "quitter")
 
 		wait_for_blocker.loop = gobject.MainLoop(gobject.main_context_default())

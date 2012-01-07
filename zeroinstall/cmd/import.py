@@ -42,12 +42,10 @@ def handle(config, options, args):
 		def run():
 			keys_downloaded = tasks.Task(pending.download_keys(config.fetcher), "download keys")
 			yield keys_downloaded.finished
-			tasks.check(keys_downloaded.finished)
 			if not config.iface_cache.update_feed_if_trusted(uri, pending.sigs, pending.new_xml):
 				blocker = config.trust_mgr.confirm_keys(pending)
 				if blocker:
 					yield blocker
-					tasks.check(blocker)
 				if not config.iface_cache.update_feed_if_trusted(uri, pending.sigs, pending.new_xml):
 					raise SafeException(_("No signing keys trusted; not importing"))
 

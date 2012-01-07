@@ -379,7 +379,6 @@ def add_remote_feed(policy, parent, interface):
 		while True:
 			got_response = DialogResponse(d)
 			yield got_response
-			tasks.check(got_response)
 			resp = got_response.response
 
 			error(None)
@@ -391,9 +390,10 @@ def add_remote_feed(policy, parent, interface):
 					fetch = policy.fetcher.download_and_import_feed(url, iface_cache)
 					if fetch:
 						d.set_sensitive(False)
-						yield fetch
-						d.set_sensitive(True)
-						tasks.check(fetch)
+						try:
+							yield fetch
+						finally:
+							d.set_sensitive(True)
 
 						iface = iface_cache.get_interface(url)
 

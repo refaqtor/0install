@@ -52,7 +52,6 @@ class DownloadScheduler:
 			step.url = current_url
 			blocker = self._sites[site_key].download(step)
 			yield blocker
-			tasks.check(blocker)
 			
 			if not step.redirect:
 				break
@@ -87,7 +86,10 @@ class Site:
 		child.start()
 
 		# Wait for child to complete download.
-		yield thread_blocker, step.dl._aborted
+		try:
+			yield thread_blocker, step.dl._aborted
+		except:
+			pass
 
 		if step.dl._aborted.happened:
 			# Don't wait for child to finish (might be stuck doing IO)

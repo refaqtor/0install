@@ -62,9 +62,10 @@ class KeyInfoFetcher:
 		def fetch_key_info():
 			try:
 				tempfile = dl.tempfile
-				yield dl.downloaded
-				self.blocker = None
-				tasks.check(dl.downloaded)
+				try:
+					yield dl.downloaded
+				finally:
+					self.blocker = None
 				tempfile.seek(0)
 				doc = minidom.parse(tempfile)
 				if doc.documentElement.localName != 'key-lookup':
@@ -124,7 +125,6 @@ class Fetcher(object):
 
 		while blockers:
 			yield blockers
-			tasks.check(blockers)
 			blockers = [b for b in blockers if not b.happened]
 
 		from zeroinstall.zerostore import unpack
@@ -170,7 +170,6 @@ class Fetcher(object):
 			fetch = self.config.iface_cache.distro.fetch_candidates(master_feed)
 			if fetch:
 				yield fetch
-				tasks.check(fetch)
 
 			# Force feed to be regenerated with the new information
 			self.config.iface_cache.get_feed(feed_url, force = True)
@@ -199,11 +198,8 @@ class Fetcher(object):
 			# Download just the upstream feed, unless it takes too long...
 			timeout = tasks.TimeoutBlocker(5, 'Mirror timeout')		# 5 seconds
 
-			yield primary, timeout
-			tasks.check(timeout)
-
 			try:
-				tasks.check(primary)
+				yield primary, timeout
 				if primary.happened:
 					return		# OK, primary succeeded!
 				# OK, maybe it's just being slow...
@@ -229,8 +225,10 @@ class Fetcher(object):
 				blockers = filter(None, [primary, mirror])
 				if not blockers:
 					break
-				yield blockers
-
+				try:
+					yield blockers
+				except:
+					pass
 				if primary:
 					try:
 						tasks.check(primary)
@@ -283,7 +281,6 @@ class Fetcher(object):
 		@tasks.named_async("fetch_feed " + url)
 		def fetch_feed():
 			yield dl.downloaded
-			tasks.check(dl.downloaded)
 
 			pending = PendingFeed(feed_url, stream)
 
@@ -295,13 +292,11 @@ class Fetcher(object):
 
 			keys_downloaded = tasks.Task(pending.download_keys(self, feed_hint = feed_url, key_mirror = key_mirror), _("download keys for %s") % feed_url)
 			yield keys_downloaded.finished
-			tasks.check(keys_downloaded.finished)
 
 			if not self.config.iface_cache.update_feed_if_trusted(pending.url, pending.sigs, pending.new_xml):
 				blocker = self.config.trust_mgr.confirm_keys(pending)
 				if blocker:
 					yield blocker
-					tasks.check(blocker)
 				if not self.config.iface_cache.update_feed_if_trusted(pending.url, pending.sigs, pending.new_xml):
 					raise NoTrustedKeys(_("No signing keys trusted; not importing"))
 
@@ -354,14 +349,12 @@ class Fetcher(object):
 			if isinstance(retrieval_method, DownloadSource):
 				blocker, stream = self.download_archive(retrieval_method, force = force, impl_hint = impl)
 				yield blocker
-				tasks.check(blocker)
 
 				stream.seek(0)
 				self._add_to_cache(required_digest, stores, retrieval_method, stream)
 			elif isinstance(retrieval_method, Recipe):
 				blocker = self.cook(required_digest, retrieval_method, stores, force, impl_hint = impl)
 				yield blocker
-				tasks.check(blocker)
 			else:
 				raise Exception(_("Unknown download type for '%s'") % retrieval_method)
 
@@ -427,9 +420,8 @@ class Fetcher(object):
 		@tasks.async
 		def download_and_add_icon():
 			stream = dl.tempfile
-			yield dl.downloaded
 			try:
-				tasks.check(dl.downloaded)
+				yield dl.downloaded
 				if dl.unmodified: return
 				stream.seek(0)
 
@@ -472,7 +464,6 @@ class Fetcher(object):
 					'computer or affect other users. You may be asked to enter a password to confirm. The '
 					'packages are:\n\n') + ('\n'.join('- ' + x for x in unsafe_impls)))
 				yield confirm
-				tasks.check(confirm)
 
 			blockers = []
 
@@ -487,8 +478,10 @@ class Fetcher(object):
 				else:
 					error.append((ex, tb))
 			while blockers:
-				yield blockers
-				tasks.check(blockers, dl_error)
+				try:
+					yield blockers
+				except:
+					tasks.check(blockers, dl_error)
 
 				blockers = [b for b in blockers if not b.happened]
 			if error:

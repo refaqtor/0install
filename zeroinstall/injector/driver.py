@@ -136,7 +136,10 @@ class Driver(object):
 
 			# Wait for at least one download to finish
 			blockers = downloads_in_progress.values()
-			yield blockers
+			try:
+				yield blockers
+			except:
+				pass
 			tasks.check(blockers, self.config.handler.report_error)
 
 			for f in downloads_in_progress.keys():
@@ -160,7 +163,6 @@ class Driver(object):
 		refreshed = self.solve_with_downloads(refresh)
 		if refreshed:
 			yield refreshed
-			tasks.check(refreshed)
 
 		if not self.solver.ready:
 			raise self.solver.get_failure_reason()
@@ -169,7 +171,6 @@ class Driver(object):
 			downloaded = self.download_uncached_implementations()
 			if downloaded:
 				yield downloaded
-				tasks.check(downloaded)
 
 	def need_download(self):
 		"""Decide whether we need to download anything (but don't do it!)

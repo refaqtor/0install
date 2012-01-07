@@ -216,7 +216,10 @@ class TrustMgr(object):
 			if not key_info_blockers:
 				break
 			info("Waiting for response from key-info server: %s", key_info_blockers)
-			yield [timeout] + key_info_blockers
+			try:
+				yield [timeout] + key_info_blockers
+			except:
+				pass
 			if timeout.happened:
 				info("Timeout waiting for key info response")
 				break
@@ -255,7 +258,6 @@ class TrustMgr(object):
 			done = self.config.handler.confirm_import_feed(pending, kfs)
 			if done is not None:
 				yield done
-				tasks.check(done)
 		finally:
 			self._current_confirm = None
 			lock.trigger()

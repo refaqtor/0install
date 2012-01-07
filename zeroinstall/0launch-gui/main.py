@@ -126,11 +126,12 @@ def run_gui(args):
 
 			if not window.systray_icon:
 				window.show()
-			yield solved
 			try:
-				window.refresh_button.set_sensitive(True)
-				window.browser.highlight_problems()
-				tasks.check(solved)
+				try:
+					yield solved
+				finally:
+					window.refresh_button.set_sensitive(True)
+					window.browser.highlight_problems()
 			except Exception as ex:
 				window.report_exception(ex)
 

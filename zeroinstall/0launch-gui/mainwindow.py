@@ -107,7 +107,6 @@ class MainWindow:
 					# We need to wait until everything is downloaded...
 					blockers = [downloaded, cancelled]
 					yield blockers
-					tasks.check(blockers)
 
 					if cancelled.happened:
 						return

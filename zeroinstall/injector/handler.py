@@ -54,8 +54,11 @@ class Handler(object):
 
 		@tasks.async
 		def download_done_stats():
-			yield dl.downloaded
-			# NB: we don't check for exceptions here; someone else should be doing that
+			try:
+				yield dl.downloaded
+			except:
+				# NB: we don't check for exceptions here; someone else should be doing that
+				pass
 			try:
 				self.n_completed_downloads += 1
 				self.total_bytes_downloaded += dl.get_bytes_downloaded_so_far()
@@ -129,7 +132,10 @@ class Handler(object):
 				for kf in key_info_fetchers: print(kf.status, file=sys.stderr)
 				stdin = tasks.InputBlocker(0, 'console')
 				blockers = [kf.blocker for kf in key_info_fetchers] + [stdin]
-				yield blockers
+				try:
+					yield blockers
+				except:
+					pass
 				for b in blockers:
 					try:
 						tasks.check(b)
@@ -262,7 +268,10 @@ class ConsoleHandler(Handler):
 		blocker = Handler.confirm_import_feed(self, pending, valid_sigs)
 		@tasks.async
 		def enable():
-			yield blocker
+			try:
+				yield blocker
+			except:
+				pass
 			self.disable_progress -= 1
 			self.show_progress()
 		enable()
