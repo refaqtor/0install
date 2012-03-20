@@ -679,17 +679,56 @@ class Implementation(object):
 		"""
 		raise NotImplementedError("abstract")
 
+# Calculates "path" lazily, since it may involve searching the file system
+class _DistributionCommand(Command):
+	__slots__ = ['impl', '_path']
+
+	def __init__(self, impl, qdom):
+		Command.__init__(self, qdom, None)
+		self.impl = impl
+		self._path = False	# lazy
+
+	@property
+	def path(self):
+		if self._path is False:
+			self._path = self.qdom.attrs.get("path", None)
+			if self._path is None:
+				pattern = self.qdom.attrs.get("glob", None)
+				if pattern:
+					if not pattern.startswith('/'):
+						raise SafeException("Glob pattern '{glob}' should start with '/' (in feed {feed})".format(
+									glob = pattern, feed = self.impl.feed.url))
+					import glob
+					matches = glob.glob(pattern)
+					if len(matches) == 1:
+						self._path = matches[0]
+					elif matches:
+						raise SafeException("Multiple matches for glob '{glob}'".format(glob = pattern))
+					else:
+						raise SafeException("No matches for glob '{glob}'".format(glob = pattern))
+		return self._path
+
+
 class DistributionImplementation(Implementation):
 	"""An implementation provided by the distribution. Information such as the version
 	comes from the package manager.
+	@ivar package_implementation: the <package-implementation> element that generated this impl (since 1.7)
+	@type package_implementation: L{qdom.Element}
 	@since: 0.28"""
-	__slots__ = ['distro', 'installed']
+	__slots__ = ['distro', 'installed', 'package_implementation']
 
-	def __init__(self, feed, id, distro):
+	def __init__(self, feed, id, distro, package_implementation = None):
 		assert id.startswith('package:')
 		Implementation.__init__(self, feed, id)
 		self.distro = distro
 		self.installed = False
+		self.package_implementation = package_implementation
+
+		if package_implementation:
+			for item in package_implementation.childNodes:
+				if item.uri != XMLNS_IFACE: continue
+				if item.name == 'command':
+					self.commands[item.getAttribute("name")] = _DistributionCommand(self, item)
 
 	@property
 	def requires_root_install(self):
