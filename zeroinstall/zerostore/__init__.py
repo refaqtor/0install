@@ -256,24 +256,21 @@ class Stores(object):
 		user_store = os.path.join(basedir.xdg_cache_home, '0install.net', 'implementations')
 		self.stores = [Store(user_store)]
 
-		impl_dirs = basedir.load_first_config('0install.net', 'injector',
-							  'implementation-dirs')
-		logger.debug(_("Location of 'implementation-dirs' config file being used: '%s'"), impl_dirs)
-		if impl_dirs:
-			with open(impl_dirs, 'rt') as stream:
-				dirs = stream.readlines()
+		if os.name == "nt":
+			from win32com.shell import shell, shellcon
+			localAppData = shell.SHGetFolderPath(0, shellcon.CSIDL_LOCAL_APPDATA, 0, 0)
+			commonAppData = shell.SHGetFolderPath(0, shellcon.CSIDL_COMMON_APPDATA, 0, 0)
+
+			userCache = os.path.join(localAppData, "0install.net", "implementations")
+			sharedCache = os.path.join(commonAppData, "0install.net", "implementations")
+			dirs = [userCache, sharedCache]
+
 		else:
-			if os.name == "nt":
-				from win32com.shell import shell, shellcon
-				localAppData = shell.SHGetFolderPath(0, shellcon.CSIDL_LOCAL_APPDATA, 0, 0)
-				commonAppData = shell.SHGetFolderPath(0, shellcon.CSIDL_COMMON_APPDATA, 0, 0)
+			dirs = ['/var/cache/0install.net/implementations']
 
-				userCache = os.path.join(localAppData, "0install.net", "implementations")
-				sharedCache = os.path.join(commonAppData, "0install.net", "implementations")
-				dirs = [userCache, sharedCache]
-
-			else:
-				dirs = ['/var/cache/0install.net/implementations']
+		for impl_dirs in basedir.load_config_paths('0install.net', 'injector', 'implementation-dirs'):
+			with open(impl_dirs, 'rt') as stream:
+				dirs.extend(stream.readlines())
 
 		for directory in dirs:
 			directory = directory.strip()
