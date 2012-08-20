@@ -22,6 +22,8 @@
 
 .B 0install whatchanged \fBNAME\fP
 
+.B 0install apps
+
 .B 0install destroy \fBNAME\fP
 
 .SS Other commands:
@@ -374,6 +376,13 @@ not delay starting the program.
 If additional requirements are given (as for "0install select", e.g. --before),
 they update the requirements stored with the application and apply to this and
 future updates.
+
+.B 0install apps
+
+.PP
+List all the applications which have been added. By default, this will open the
+GUI, which also allows you to run or modify the applications. Use \-c to get a
+simple list written to the console.
 
 .B 0install whatchanged \fBNAME\fP
 

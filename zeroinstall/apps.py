@@ -285,3 +285,18 @@ class AppManager:
 			return None
 		else:
 			raise SafeException("No such application '{name}'".format(name = name))
+	
+	def list_apps(self):
+		"""Returns all the apps.
+		@rtype: [L{App}]"""
+		apps = []
+
+		for d in basedir.load_config_paths(namespaces.config_site, "apps"):
+			for app in os.listdir(d):
+				if not valid_name.match(app):
+					continue
+				app_dir = os.path.join(d, app)
+				if os.path.isdir(app_dir):
+					apps.append((app, App(self.config, app_dir)))
+
+		return [app for (name, app) in sorted(apps)]

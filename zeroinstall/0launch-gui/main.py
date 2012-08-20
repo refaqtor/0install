@@ -26,6 +26,7 @@ def recalculate():
 
 def run_gui(args):
 	parser = OptionParser(usage=_("usage: %prog [options] interface"))
+	parser.add_option("", "--apps", help=_("show app list"), action='store_true')
 	parser.add_option("", "--before", help=_("choose a version before this"), metavar='VERSION')
 	parser.add_option("", "--cpu", help=_("target CPU type"), metavar='CPU')
 	parser.add_option("", "--command", help=_("command to select"), metavar='COMMAND')
@@ -96,6 +97,16 @@ def run_gui(args):
 				raise SafeException("Failed to connect to display.")
 			except SafeException as ex:
 				nogui(ex)	# logging needs this as a raised exception
+
+	if options.apps:
+		from zeroinstall.gtkui.applistbox import AppListBox, AppList
+		from zeroinstall.injector.iface_cache import iface_cache
+		box = AppListBox(iface_cache, AppList())
+		done = tasks.Blocker('close app list')
+		box.window.connect('destroy', lambda w: done.trigger())
+		box.window.show()
+		tasks.wait_for_blocker(done)
+		sys.exit(0)
 
 	handler = gui.GUIHandler()
 
