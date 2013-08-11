@@ -9,7 +9,7 @@ open Support.Common
 open Options
 module Qdom = Support.Qdom
 
-let use_ocaml_solver = false      (* TODO: just for testing *)
+let use_ocaml_solver = true      (* TODO: just for testing *)
 
 type target = App of filepath | Interface of iface_uri | Selections of Qdom.element
 
