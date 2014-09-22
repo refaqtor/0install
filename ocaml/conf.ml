@@ -18,6 +18,7 @@ type key =
   | Freshness
   | Help_with_testing
   | Auto_approve_keys
+  | Shell_integration
 
 let parse_bool s =
   match String.lowercase s with
@@ -30,6 +31,13 @@ let parse_network_use = function
   | "minimal" -> Minimal_network
   | "off-line" -> Offline
   | other -> raise_safe "Invalid network use type '%s'" other
+
+let parse_shell_integration = function
+  | "auto" -> First_writable
+  | other ->
+      match Str.bounded_split U.re_colon other 2 with
+        | ["dir"; path] -> Bin_directory path
+        | _ -> raise_safe "Invalid shell integration type '%s'" other
 
 let parse_interval value =
   if value = "0" then 0.0 else (
@@ -69,6 +77,7 @@ let parse_key = function
   | "freshness" -> Freshness
   | "help_with_testing" -> Help_with_testing
   | "auto_approve_keys" -> Auto_approve_keys
+  | "shell_integration" -> Shell_integration
   | key -> raise_safe "Unknown setting name '%s'" key
 
 let format_key = function
@@ -76,23 +85,26 @@ let format_key = function
   | Freshness -> "freshness"
   | Help_with_testing -> "help_with_testing"
   | Auto_approve_keys -> "auto_approve_keys"
+  | Shell_integration -> "shell_integration"
 
 let format_setting config = function
   | Network_use -> C.format_network_use config.network_use
   | Freshness -> format_interval (default 0.0 config.freshness)
   | Help_with_testing -> C.format_bool config.help_with_testing
   | Auto_approve_keys -> C.format_bool config.auto_approve_keys
+  | Shell_integration -> C.format_shell_integration config.shell_integration
 
 let set_setting config value = function
   | Network_use -> config.network_use <- parse_network_use value
   | Help_with_testing -> config.help_with_testing <- parse_bool value
   | Auto_approve_keys -> config.auto_approve_keys <- parse_bool value
+  | Shell_integration -> config.shell_integration <- parse_shell_integration value
   | Freshness ->
       let freshness = parse_interval value in
       config.freshness <- if freshness <= 0.0 then None else Some freshness
 
 let show_settings config =
-  [ Auto_approve_keys; Freshness; Help_with_testing; Network_use] |> List.iter (fun key ->
+  [ Auto_approve_keys; Freshness; Help_with_testing; Network_use; Shell_integration] |> List.iter (fun key ->
     Printf.printf "%s = %s\n" (format_key key) (format_setting config key)
   )
 

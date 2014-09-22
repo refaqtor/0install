@@ -345,7 +345,15 @@ let integrate_shell config app executable_name =
   (* todo: remember which commands we create *)
   validate_name "executable" executable_name;
 
-  let bin_dir = find_bin_dir config in
+  let bin_dir = match config.shell_integration with
+    | First_writable ->
+        let dir = find_bin_dir config in
+        log_info "Found bin directory %s for shell integration" dir;
+        dir
+    | Bin_directory dir ->
+        log_info "Using directory %s for shell integration (from config)" dir;
+        dir
+  in
   let launcher = bin_dir +/ executable_name in
   if config.system#file_exists launcher then
     raise_safe "Command already exists: %s" launcher;
