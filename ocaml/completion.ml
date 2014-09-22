@@ -111,23 +111,26 @@ let complete_command (completer:completer) raw_options prefix group =
 let complete_config_option completer pre =
   let add_if_matches name =
     if starts_with name pre then completer#add Add name in
-  List.iter add_if_matches ["network_use"; "freshness"; "help_with_testing"; "auto_approve_keys"]
+  List.iter add_if_matches (List.map (fun (name, _key) -> name) Conf.options)
 
 (* 0install config name <Tab> *)
 let complete_config_value config completer name pre =
   let add_if_matches value =
     if starts_with value pre then completer#add Add value in
-  match name with
-  | "network_use" ->
-      List.iter add_if_matches ["off-line"; "minimal"; "full"]
-  | "help_with_testing" | "auto_approve_keys" ->
-      List.iter add_if_matches ["true"; "false"]
-  | "freshness" -> (
-      match config.freshness with
-      | None -> add_if_matches "0"
-      | Some freshness -> add_if_matches @@ Conf.format_interval  @@ freshness
-  )
-  | _ -> ()
+  try
+    let open Conf in
+    match List.assoc name options with
+    | Network_use ->
+        List.iter add_if_matches ["off-line"; "minimal"; "full"]
+    | Help_with_testing | Auto_approve_keys ->
+        List.iter add_if_matches ["true"; "false"]
+    | Bin_dir ->
+        completer#add_files pre
+    | Freshness ->
+        match config.freshness with
+        | None -> add_if_matches "0"
+        | Some freshness -> add_if_matches @@ Conf.format_interval @@ freshness
+  with Not_found -> ()
 
 (* 0install remove-feed <Tab> *)
 let complete_interfaces_with_feeds config completer pre =

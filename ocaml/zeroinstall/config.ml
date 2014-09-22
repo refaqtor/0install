@@ -21,18 +21,11 @@ let format_network_use = function
   | Minimal_network -> "minimal"
   | Offline -> "off-line"
 
-let parse_shell_integration = function
-  | "auto" -> First_writable
-  | other ->
-      match Str.bounded_split Support.Utils.re_colon other 2 with
-        | ["dir"; path] -> Bin_directory path
-        | _ ->
-          Support.Logging.log_warning "Unknown shell integration type '%s'" other;
-          First_writable
+let parse_bin_dir = function
+  | "" -> None
+  | dir -> Some dir
 
-let format_shell_integration = function
-  | First_writable -> "auto"
-  | Bin_directory d -> "dir:" ^ d
+let format_bin_dir d = default "" d
 
 let parse_bool s =
   match String.lowercase s with
@@ -65,7 +58,7 @@ let load_config config =
       | ("help_with_testing", help) -> config.help_with_testing <- parse_bool help
       | ("auto_approve_keys", value) -> config.auto_approve_keys <- parse_bool value
       | ("key_info_server", value) -> config.key_info_server <- parse_optional_string value
-      | ("shell_integration", value) -> config.shell_integration <- parse_shell_integration value
+      | ("bin_dir", value) -> config.bin_dir <- parse_bin_dir value
       | _ -> ()
     )
     | _ -> ignore in    (* other [sections] *)
@@ -109,7 +102,7 @@ let get_default_config system path_to_prog =
     dry_run = false;
     help_with_testing = false;
     auto_approve_keys = true;
-    shell_integration = First_writable;
+    bin_dir = None;
     system;
     langs = Support.Locale.score_langs (Support.Locale.get_langs system);
   } in
@@ -132,7 +125,7 @@ let save_config config =
     Printf.fprintf ch "network_use = %s\n" (format_network_use config.network_use);
     Printf.fprintf ch "freshness = %s\n" (format_freshness config.freshness);
     Printf.fprintf ch "auto_approve_keys = %s\n" (format_bool config.auto_approve_keys);
-    Printf.fprintf ch "shell_integration = %s\n" (format_shell_integration config.shell_integration);
+    Printf.fprintf ch "bin_dir = %s\n" (format_bin_dir config.bin_dir);
     let key_info_server_str =
       match config.key_info_server with
       | None -> Some ""

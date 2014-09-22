@@ -15,10 +15,6 @@ type feed_url = string
 
 type network_use = Full_network | Minimal_network | Offline
 
-type shell_integration =
-  | First_writable
-  | Bin_directory of string
-
 type config = {
   basedirs: Support.Basedir.basedirs;
   mutable stores: filepath list;
@@ -34,7 +30,7 @@ type config = {
   mutable network_use : network_use;
   mutable help_with_testing : bool;
   mutable auto_approve_keys : bool;
-  mutable shell_integration : shell_integration;
+  mutable bin_dir : filepath option;        (* Where to create launcher scripts *)
   
   langs : int Support.Locale.LangMap.t;
 }
